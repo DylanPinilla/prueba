@@ -52,9 +52,9 @@
             forward.normalize();
 
             const right = new THREE.Vector3();
-            right.crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+            right.crossVectors(new THREE.Vector3(0, 1, 0), forward).normalize();
 
-            rigObj.position.add(forward.multiplyScalar(-this.leftY * data.moveSpeed));
+            rigObj.position.add(forward.multiplyScalar(this.leftY * data.moveSpeed));
             rigObj.position.add(right.multiplyScalar(this.leftX * data.moveSpeed));
           }
 
