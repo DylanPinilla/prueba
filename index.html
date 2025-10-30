@@ -135,4 +135,48 @@
     <script>
       // --- Animaciones de personajes ---
       const capitan = document.getElementById("capitan");
-      const dilan = document.get
+      const dilan = document.getElementById("dilan");
+
+      const capitanPosIni = "-45 0 10";
+      const capitanRotIni = "0 90 0";
+      const dilanPosIni = "1 0 -10";
+      const dilanRotIni = "0 0 0";
+
+      const duracionTotal = 16500;
+      const pausaFinal = 500;
+      const tiempoReset = 300;
+
+      function aplicarAnimaciones() {
+        capitan.setAttribute("animation", "property: position; to: -10 0 10; dur: 16000; easing: linear; loop: false");
+        capitan.setAttribute("animation__rotar", "property: rotation; to: 0 180 0; dur: 3000; easing: linear; delay: 13500; loop: false");
+
+        dilan.setAttribute("animation__rotar", "property: rotation; to: 0 -60 0; dur: 2000; easing: linear; delay: 9000; loop: false");
+        dilan.setAttribute("animation__mover", "property: position; to: -3 0 -7; dur: 2000; easing: linear; delay: 9000; loop: false");
+        dilan.setAttribute("animation__mover_dos", "property: position; from: -3 0 -7; to: 1 0 -10; dur: 2000; easing: linear; delay: 14000; loop: false");
+      }
+
+      function reiniciarAnimaciones() {
+        capitan.removeAttribute("animation");
+        capitan.removeAttribute("animation__rotar");
+        dilan.removeAttribute("animation__rotar");
+        dilan.removeAttribute("animation__mover");
+        dilan.removeAttribute("animation__mover_dos");
+
+        capitan.setAttribute("position", capitanPosIni);
+        capitan.setAttribute("rotation", capitanRotIni);
+        dilan.setAttribute("position", dilanPosIni);
+        dilan.setAttribute("rotation", dilanRotIni);
+
+        setTimeout(() => { aplicarAnimaciones(); }, tiempoReset);
+      }
+
+      function iniciarCiclo() {
+        aplicarAnimaciones();
+        setInterval(() => { setTimeout(reiniciarAnimaciones, pausaFinal); }, duracionTotal + pausaFinal);
+      }
+
+      window.addEventListener("load", iniciarCiclo);
+    </script>
+  </body>
+</html>
+
