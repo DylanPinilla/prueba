@@ -22,7 +22,7 @@
           this.leftY = 0;
           this.rightX = 0;
 
-          // Joysticks
+          // Joystick izquierdo: mover
           document.querySelector("#leftHand").addEventListener(
             "thumbstickmoved",
             (evt) => {
@@ -30,6 +30,8 @@
               this.leftY = evt.detail.y;
             }
           );
+
+          // Joystick derecho: rotar
           document.querySelector("#rightHand").addEventListener(
             "thumbstickmoved",
             (evt) => {
@@ -43,7 +45,7 @@
           const pos = this.rig.object3D.position;
           const rotY = this.rig.object3D.rotation.y;
 
-          // Movimiento con joystick izquierdo (invertido para que coincida con PC)
+          // Movimiento con joystick izquierdo (coherente con PC)
           if (Math.abs(this.leftX) > data.deadzone || Math.abs(this.leftY) > data.deadzone) {
             pos.x += this.leftX * data.moveSpeed * Math.cos(rotY) - this.leftY * data.moveSpeed * Math.sin(rotY);
             pos.z += this.leftX * data.moveSpeed * Math.sin(rotY) + this.leftY * data.moveSpeed * Math.cos(rotY);
