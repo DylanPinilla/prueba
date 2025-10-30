@@ -4,11 +4,9 @@
     <meta charset="utf-8" />
     <title>Escena interactiva VR/PC</title>
 
-    <!-- A-Frame -->
     <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
 
-    <!-- Componente para mover rig con joysticks -->
     <script>
       AFRAME.registerComponent("vr-controls", {
         schema: {
@@ -18,6 +16,7 @@
         },
         init: function () {
           this.rig = document.querySelector("#rig");
+          this.cam = document.querySelector("#mainCam");
           this.leftX = 0;
           this.leftY = 0;
           this.rightX = 0;
@@ -40,29 +39,36 @@
           );
         },
         tick: function () {
-          if (!this.rig) return;
+          if (!this.rig || !this.cam) return;
           const data = this.data;
-          const pos = this.rig.object3D.position;
-          const rotY = this.rig.object3D.rotation.y;
+          const rigObj = this.rig.object3D;
+          const camObj = this.cam.object3D;
 
-          // Movimiento con joystick izquierdo (coherente con PC)
+          // Mover rig según orientación de la cámara
           if (Math.abs(this.leftX) > data.deadzone || Math.abs(this.leftY) > data.deadzone) {
-            pos.x += this.leftX * data.moveSpeed * Math.cos(rotY) - this.leftY * data.moveSpeed * Math.sin(rotY);
-            pos.z += this.leftX * data.moveSpeed * Math.sin(rotY) + this.leftY * data.moveSpeed * Math.cos(rotY);
+            const forward = new THREE.Vector3();
+            camObj.getWorldDirection(forward); // dirección hacia donde mira la cámara
+            forward.y = 0;
+            forward.normalize();
+
+            const right = new THREE.Vector3();
+            right.crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+
+            rigObj.position.add(forward.multiplyScalar(-this.leftY * data.moveSpeed));
+            rigObj.position.add(right.multiplyScalar(this.leftX * data.moveSpeed));
           }
 
-          // Rotación con joystick derecho
+          // Rotación del rig con joystick derecho
           if (Math.abs(this.rightX) > data.deadzone) {
-            this.rig.object3D.rotation.y -= this.rightX * data.rotateSpeed * 0.05;
+            rigObj.rotation.y -= this.rightX * data.rotateSpeed * 0.05;
           }
         },
       });
 
-      // Componente para gaze redirect
       AFRAME.registerComponent("gaze-redirect", {
         schema: {
           url: { type: "string", default: "https://gabrielcarog.github.io/Museo/" },
-          duration: { type: "number", default: 3000 } // ms
+          duration: { type: "number", default: 3000 }
         },
         init: function () {
           this.timer = null;
@@ -120,7 +126,6 @@
       <!-- RIG jugador -->
       <a-entity id="rig" position="0 1.6 5" vr-controls>
         <a-camera id="mainCam" wasd-controls look-controls>
-          <!-- Cursor central -->
           <a-cursor fuse="true" fuse-timeout="3000" geometry="primitive:ring;radiusInner:0.01;radiusOuter:0.02" material="color:white; shader:flat"></a-cursor>
         </a-camera>
 
@@ -129,56 +134,9 @@
         <a-entity id="rightHand" meta-touch-controls="hand: right; model: true"></a-entity>
       </a-entity>
 
-      <!-- Portal interactivo (círculo) -->
+      <!-- Portal interactivo -->
       <a-circle class="interactivo" gaze-redirect url="https://gabrielcarog.github.io/Museo/" position="14.94 1.6 3.66" rotation="-90 0 0" radius="1" color="#00ffff" material="emissive:#00ffff;emissiveIntensity:1.5"></a-circle>
-
     </a-scene>
-
-    <script>
-      // --- Animaciones de personajes ---
-      const capitan = document.getElementById("capitan");
-      const dilan = document.getElementById("dilan");
-
-      const capitanPosIni = "-45 0 10";
-      const capitanRotIni = "0 90 0";
-      const dilanPosIni = "1 0 -10";
-      const dilanRotIni = "0 0 0";
-
-      const duracionTotal = 16500;
-      const pausaFinal = 500;
-      const tiempoReset = 300;
-
-      function aplicarAnimaciones() {
-        capitan.setAttribute("animation", "property: position; to: -10 0 10; dur: 16000; easing: linear; loop: false");
-        capitan.setAttribute("animation__rotar", "property: rotation; to: 0 180 0; dur: 3000; easing: linear; delay: 13500; loop: false");
-
-        dilan.setAttribute("animation__rotar", "property: rotation; to: 0 -60 0; dur: 2000; easing: linear; delay: 9000; loop: false");
-        dilan.setAttribute("animation__mover", "property: position; to: -3 0 -7; dur: 2000; easing: linear; delay: 9000; loop: false");
-        dilan.setAttribute("animation__mover_dos", "property: position; from: -3 0 -7; to: 1 0 -10; dur: 2000; easing: linear; delay: 14000; loop: false");
-      }
-
-      function reiniciarAnimaciones() {
-        capitan.removeAttribute("animation");
-        capitan.removeAttribute("animation__rotar");
-        dilan.removeAttribute("animation__rotar");
-        dilan.removeAttribute("animation__mover");
-        dilan.removeAttribute("animation__mover_dos");
-
-        capitan.setAttribute("position", capitanPosIni);
-        capitan.setAttribute("rotation", capitanRotIni);
-        dilan.setAttribute("position", dilanPosIni);
-        dilan.setAttribute("rotation", dilanRotIni);
-
-        setTimeout(() => { aplicarAnimaciones(); }, tiempoReset);
-      }
-
-      function iniciarCiclo() {
-        aplicarAnimaciones();
-        setInterval(() => { setTimeout(reiniciarAnimaciones, pausaFinal); }, duracionTotal + pausaFinal);
-      }
-
-      window.addEventListener("load", iniciarCiclo);
-    </script>
   </body>
 </html>
 
