@@ -1,23 +1,231 @@
 <!DOCTYPE html>
 <html lang="es">
   <head>
-    <meta charset="utf-8">
-    <title>Movimiento VR con Joysticks</title>
-    <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
-  </head>
-  <body>
-    <a-scene>
-      <!-- Piso -->
-      <a-plane rotation="-90 0 0" width="30" height="30" color="#7BC8A4"></a-plane>
+    <meta charset="utf-8" />
+    <title>Escena con Capitán, Dilan y Portal</title>
 
-      <!-- Cámara con control universal -->
-      <a-entity id="player" position="0 1.6 0" universal-controls movement-controls>
-        <a-entity camera look-controls></a-entity>
+    <!-- A-Frame -->
+    <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+
+    <!-- Plugin (animation-mixer funcional) -->
+    <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+
+    <!-- Componente: movimiento por joystick (ejes FIJOS, igual que WASD) -->
+    <script>
+      AFRAME.registerComponent("joystick-move", {
+        schema: {
+          speed: { type: "number", default: 0.12 }, // velocidad base
+          deadzone: { type: "number", default: 0.15 } // zona muerta del stick
+        },
+        init: function () {
+          const rig = document.querySelector("#rig");
+          const data = this.data;
+
+          // Handler para thumbstick (se aplica la misma lógica tanto a la mano izquierda como a la derecha)
+          this._onThumb = function (evt) {
+            if (!rig) return;
+            const x = evt.detail.x || 0; // derecha = +, izquierda = -
+            const y = evt.detail.y || 0; // adelante = NEGATIVO (según WebXR), atrás = POSITIVO
+
+            // Aplica deadzone para evitar movimientos no deseados
+            const absX = Math.abs(x);
+            const absY = Math.abs(y);
+
+            let moveX = 0;
+            let moveZ = 0;
+
+            if (absX > data.deadzone) {
+              // eje X mundial (A/D)
+              moveX = x * data.speed;
+            }
+            if (absY > data.deadzone) {
+              // eje Z mundial (W/S). Notar: push forward suele dar y < 0 -> suma negativa en Z -> avanza (como W)
+              moveZ = y * data.speed;
+            }
+
+            // Actualizar posición del rig en coordenadas mundiales (no dependiente de la mirada)
+            rig.object3D.position.x += moveX;
+            rig.object3D.position.z += moveZ;
+          };
+
+          // Nos suscribimos al evento (el componente debe estar en la entidad meta-touch-controls)
+          this.el.addEventListener("thumbstickmoved", this._onThumb);
+        },
+        remove: function () {
+          if (this._onThumb) this.el.removeEventListener("thumbstickmoved", this._onThumb);
+        }
+      });
+    </script>
+    <style>
+      /* Pequeño HUD para mostrar instrucciones (opcional y no intrusivo) */
+      .hud {
+        position: fixed;
+        left: 12px;
+        bottom: 12px;
+        background: rgba(0,0,0,0.45);
+        color: #fff;
+        padding: 8px 10px;
+        border-radius: 6px;
+        font-family: sans-serif;
+        font-size: 12px;
+        z-index: 9999;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="hud">PC: WASD + mouse • VR: joystick izquierdo mueve (ejes fijos) • Modelos de mandos visibles</div>
+
+    <a-scene>
+      <a-assets>
+        <img id="skyTexture" src="https://cdn.aframe.io/a-painter/images/sky.jpg" />
+      </a-assets>
+
+      <a-sky id="background" src="#skyTexture" theta-length="90" radius="45"></a-sky>
+
+      <!-- Luces -->
+      <a-entity light="type: ambient; intensity: 1"></a-entity>
+      <a-entity light="type: directional; intensity: 1" position="2 4 3"></a-entity>
+
+      <!-- Escenario -->
+      <a-entity
+        gltf-model="url(https://raw.githubusercontent.com/GabrielCaroG/modelo3d/main/Escenario.glb)"
+        scale="1.5 1.5 1.5"
+        position="0 0 0"
+      ></a-entity>
+
+      <!-- Capitán Cubillos -->
+      <a-entity
+        id="capitan"
+        gltf-model="url(https://cdn.jsdelivr.net/gh/GabrielCaroG/modelo3d@main/CapitanAnimacion.glb)"
+        scale="1 1 1"
+        position="-45 0 10"
+        rotation="0 90 0"
+        animation-mixer="clip: Armature; loop: repeat; timeScale: 0.5"
+      ></a-entity>
+
+      <!-- Dilan -->
+      <a-entity
+        id="dilan"
+        gltf-model="url(https://raw.githubusercontent.com/GabrielCaroG/modelo3d/main/Dilananimacion.glb)"
+        scale="1 1 1"
+        position="1 0 -10"
+        animation-mixer="clip: Animation; loop: false; timeScale: 1"
+      ></a-entity>
+
+      <!-- RIG del jugador (agrupa cámara + manos) -->
+      <a-entity id="rig" position="0 1.6 5">
+        <!-- Cámara: mantiene wasd-controls y look-controls para PC -->
+        <a-camera id="mainCam" wasd-controls look-controls></a-camera>
+
+        <!-- Manos (controladores VR) - se muestra modelo y se usa joystick-move -->
+        <!-- Se recomienda usar el joystick en el izquierdo; sin embargo ambos escuchan el evento -->
+        <a-entity id="leftHand" meta-touch-controls="hand: left; model: true" joystick-move></a-entity>
+        <a-entity id="rightHand" meta-touch-controls="hand: right; model: true" joystick-move></a-entity>
       </a-entity>
 
-      <!-- Cubo de referencia -->
-      <a-box position="0 1 -3" color="#4CC3D9"></a-box>
+      <!-- Portal (girado 90° hacia la izquierda) -->
+      <a-torus
+        id="portal"
+        position="14.94 1.60 3.66"
+        rotation="0 -90 0"
+        radius="1"
+        radius-tubular="0.08"
+        color="#00ffff"
+        material="emissive: #00ffff; emissiveIntensity: 1.5; metalness: 0.2; roughness: 0.1"
+        scale="1.2 1.2 1.2"
+      ></a-torus>
+
+      <!-- Luz del portal -->
+      <a-entity
+        light="type: point; color: #00ffff; intensity: 2; distance: 5"
+        position="14.94 1.60 3.66"
+      ></a-entity>
     </a-scene>
+
+    <script>
+      // --- ANIMACIONES DE LOS PERSONAJES ---
+      const capitan = document.getElementById("capitan");
+      const dilan = document.getElementById("dilan");
+
+      const capitanPosIni = "-45 0 10";
+      const capitanRotIni = "0 90 0";
+      const dilanPosIni = "1 0 -10";
+      const dilanRotIni = "0 0 0";
+
+      const duracionTotal = 16500;
+      const pausaFinal = 500;
+      const tiempoReset = 300;
+
+      function aplicarAnimaciones() {
+        capitan.setAttribute(
+          "animation",
+          "property: position; to: -10 0 10; dur: 16000; easing: linear; loop: false"
+        );
+        capitan.setAttribute(
+          "animation__rotar",
+          "property: rotation; to: 0 180 0; dur: 3000; easing: linear; delay: 13500; loop: false"
+        );
+
+        dilan.setAttribute(
+          "animation__rotar",
+          "property: rotation; to: 0 -60 0; dur: 2000; easing: linear; delay: 9000; loop: false"
+        );
+        dilan.setAttribute(
+          "animation__mover",
+          "property: position; to: -3 0 -7; dur: 2000; easing: linear; delay: 9000; loop: false"
+        );
+        dilan.setAttribute(
+          "animation__mover_dos",
+          "property: position; from: -3 0 -7; to: 1 0 -10; dur: 2000; easing: linear; delay: 14000; loop: false"
+        );
+      }
+
+      function reiniciarAnimaciones() {
+        capitan.removeAttribute("animation");
+        capitan.removeAttribute("animation__rotar");
+        dilan.removeAttribute("animation__rotar");
+        dilan.removeAttribute("animation__mover");
+        dilan.removeAttribute("animation__mover_dos");
+
+        capitan.setAttribute("position", capitanPosIni);
+        capitan.setAttribute("rotation", capitanRotIni);
+        dilan.setAttribute("position", dilanPosIni);
+        dilan.setAttribute("rotation", dilanRotIni);
+
+        setTimeout(() => {
+          aplicarAnimaciones();
+        }, tiempoReset);
+      }
+
+      function iniciarCiclo() {
+        aplicarAnimaciones();
+        setInterval(() => {
+          setTimeout(() => {
+            reiniciarAnimaciones();
+          }, pausaFinal);
+        }, duracionTotal + pausaFinal);
+      }
+
+      window.addEventListener("load", iniciarCiclo);
+
+      // --- PORTAL DETECTOR ---
+      AFRAME.registerComponent("portal-detector", {
+        tick: function () {
+          const rig = document.querySelector("#rig");
+          const portal = document.querySelector("#portal");
+          if (!rig || !portal) return;
+          const playerPos = rig.object3D.position;
+          const portalPos = portal.object3D.position;
+
+          const distancia = playerPos.distanceTo(portalPos);
+          if (distancia < 1) {
+            window.location.href = "https://gabrielcarog.github.io/Museo/";
+          }
+        }
+      });
+      // activarlo en el portal
+      document.querySelector("#portal").setAttribute("portal-detector", "");
+    </script>
   </body>
 </html>
